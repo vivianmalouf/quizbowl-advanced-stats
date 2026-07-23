@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quizbowl Stats</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      /* Color palette */
+      --color-primary: #8b0000;
+      --color-secondary: #fff5f5;
+      --color-bg: #f4f7f6;
+      --color-surface: #ffffff;
+      --color-text: #2d3436;
+      --color-text-muted: #636e72;
+      --color-border: #e9ecef;
+
+      /* Spacing */
+      --spacing-xs: 0.25rem;
+      --spacing-sm: 0.5rem;
+      --spacing-md: 1rem;
+      --spacing-lg: 1.5rem;
+      --spacing-xl: 2rem;
+
+      /* Typography */
+      --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+      --font-size-xs: 0.72rem;
+      --font-size-sm: 0.82rem;
+      --font-size-base: 0.9rem;
+      --font-size-lg: 1.1rem;
+      --font-size-xl: 1.3rem;
+
+      /* Borders */
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-family);
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+
+    header {
+      background: var(--color-surface);
+      padding: var(--spacing-lg) var(--spacing-xl);
+      border-bottom: 1px solid var(--color-border);
+    }
+    header h1 {
+      font-size: var(--font-size-xl);
+      font-weight: 800;
+      color: var(--color-primary);
+    }
+
+    nav {
+      background: var(--color-surface);
+      padding: 0 var(--spacing-xl);
+      display: flex;
+      gap: var(--spacing-md);
+      border-bottom: 1px solid var(--color-border);
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: var(--color-text-muted);
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      cursor: pointer;
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s ease;
+    }
+    nav button:hover { color: var(--color-primary); }
+    nav button.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+
+    main {
+      max-width: 1200px;
+      margin: var(--spacing-lg) auto;
+      padding: 0 var(--spacing-md);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeIn 0.4s ease; }
+
+    .search-bar { margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm); }
+    .search-bar input {
+      width: 100%; max-width: 400px;
+      padding: 0.55rem 0.85rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-base);
+      background: var(--color-surface);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-bar input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+    }
+    .search-bar .search-icon { color: var(--color-text-muted); font-size: 1rem; opacity: 0.6; }
+
+    .table-wrap {
+      overflow-x: auto;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      padding: 0.85rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: var(--font-size-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-text-muted);
+      border-bottom: 2px solid var(--color-primary);
+      position: sticky;
+      top: 0;
+      background: var(--color-surface);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    th:hover { color: var(--color-primary); }
+    td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--font-size-base);
+      transition: background 0.2s;
+    }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:hover td { background: var(--color-secondary); }
+
+    .sort-arrow { font-size: 0.65rem; margin-left: 4px; opacity: 0.8; color: var(--color-primary); }
+
+    .rank-num {
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      font-weight: 600;
+      min-width: 24px;
+      display: inline-block;
+    }
+    .rank-num.top3 { color: var(--color-primary); }
+
+    /* Expandable row details */
+    .expand-icon {
+      display: inline-block;
+      width: 18px;
+      text-align: center;
+      font-size: 0.65rem;
+      transition: transform 0.3s ease;
+      color: var(--color-primary);
+      flex-shrink: 0;
+    }
+    .expand-icon.expanded { transform: rotate(90deg); }
+    .name-cell {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .name-cell:hover {
+      color: var(--color-primary);
+    }
+    .detail-row { display: none; }
+    .detail-row.open { display: table-row; }
+    .detail-row td {
+      padding: 0;
+      border-bottom: 2px solid var(--color-primary);
+      background: var(--color-secondary);
+    }
+    .detail-inner {
+      padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) var(--spacing-xl);
+    }
+    .detail-inner h4 {
+      font-size: var(--font-size-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-primary);
+      margin-bottom: var(--spacing-sm);
+      font-weight: 600;
+    }
+    .detail-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-sm);
+      background: var(--color-surface);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .detail-table th {
+      background: var(--color-bg);
+      color: var(--color-text-muted);
+      padding: 0.55rem 0.75rem;
+      font-weight: 600;
+      font-size: var(--font-size-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .detail-table td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--font-size-sm);
+    }
+    .detail-table td.num { font-variant-numeric: tabular-nums; }
+    .detail-table th:first-child,
+    .detail-table td:first-child { min-width: 110px; }
+    .detail-table th:nth-child(2),
+    .detail-table td:nth-child(2) { min-width: 70px; text-align: right; }
+    .detail-table th:nth-child(3),
+    .detail-table td:nth-child(3) { min-width: 70px; text-align: right; }
+    .detail-table th:nth-child(4),
+    .detail-table td:nth-child(4) { min-width: 260px; }
+    .detail-table tr:last-child td { border-bottom: none; }
+    .detail-table tr:hover td { background: var(--color-secondary); }
+    .cat-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    .cat-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--color-border);
+      border-radius: 3px;
+      overflow: visible;
+      min-width: 30px;
+    }
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      display: block;
+      transition: width 0.4s ease;
+    }
+    .cat-bar-fill.positive { background: var(--color-primary); }
+    .cat-bar-fill.negative { background: #a0a0a0; }
+
+    /* Compare panel */
+    .compare-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .compare-selectors {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+    }
+    .compare-selector-col {
+      flex: 1;
+      max-width: 360px;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+      box-shadow: var(--shadow-md);
+    }
+    .compare-selector-col h3 {
+      font-size: var(--font-size-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-primary);
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .compare-selector-col label {
+      display: block;
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      margin-bottom: var(--spacing-xs);
+      font-weight: 500;
+    }
+    .compare-selector-col select {
+      width: 100%;
+      padding: 0.45rem 0.65rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-base);
+      background: var(--color-surface);
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .compare-selector-col select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+    }
+    .vs-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      padding-top: var(--spacing-lg);
+    }
+    .compare-result {
+      display: none;
+    }
+    .compare-result.visible {
+      display: block;
+    }
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+    .compare-table thead th {
+      background: var(--color-primary);
+      color: #fff;
+      padding: 0.7rem 1rem;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      text-align: center;
+    }
+    .compare-table thead th:first-child {
+      width: 120px;
+    }
+    .compare-table thead th:last-child {
+      width: 120px;
+    }
+    .compare-table tbody tr {
+      border-bottom: 1px solid var(--color-border);
+    }
+    .compare-table tbody tr:last-child { border-bottom: none; }
+    .compare-table tbody tr:hover { background: var(--color-secondary); }
+    .compare-table td {
+      padding: 0.65rem 1rem;
+      font-size: var(--font-size-sm);
+      font-variant-numeric: tabular-nums;
+    }
+    .compare-table td.left-val {
+      text-align: right;
+      font-weight: 600;
+      color: var(--color-text);
+      width: 120px;
+    }
+    .compare-table td.right-val {
+      text-align: left;
+      font-weight: 600;
+      color: var(--color-text);
+      width: 120px;
+    }
+    .compare-table td.center-label {
+      text-align: center;
+      color: var(--color-text-muted);
+      font-size: var(--font-size-xs);
+      font-weight: 500;
+      white-space: nowrap;
+      width: 100px;
+      min-width: 100px;
+    }
+    .compare-table td.winner {
+      color: var(--color-primary);
+    }
+    .compare-table td.loser {
+      color: var(--color-text-muted);
+    }
+    .compare-cat-section {
+      margin-top: 0;
+      padding: 0;
+      border-top: none;
+    }
+    .compare-cat-section h4 {
+      font-size: var(--font-size-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-primary);
+      margin-bottom: 0;
+      padding: 0.6rem 1rem 0.3rem;
+      font-weight: 600;
+      background: var(--color-bg);
+      text-align: center;
+    }
+    .compare-cat-row {
+      /* normal table rows */
+    }
+    .compare-cat-row td {
+      padding: 0.4rem 1rem;
+      font-size: var(--font-size-sm);
+    }
+    .compare-cat-row td.left-val {
+      width: 120px;
+    }
+    .compare-cat-row td.right-val {
+      width: 120px;
+    }
+    .compare-cat-row td.center-label {
+      width: 100px;
+    }
+    .compare-cat-bars {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      flex: 1;
+      min-width: 0;
+    }
+    .compare-cat-bar-half {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+      min-width: 2px;
+    }
+    .compare-cat-bar-half.winner { background: var(--color-primary); }
+    .compare-cat-bar-half.loser { background: var(--color-border); }
+    .compare-empty {
+      text-align: center;
+      padding: 3rem;
+      color: var(--color-text-muted);
+      font-size: var(--font-size-lg);
+    }
+    .compare-empty .empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    /* Team detail page */
+    .detail-page {
+      display: none;
+    }
+    .detail-page.active {
+      display: block;
+    }
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+    .detail-header h2 {
+      font-size: var(--font-size-xl);
+      font-weight: 800;
+      color: var(--color-text);
+    }
+    .detail-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.5rem 0.85rem;
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-sm);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .detail-back:hover {
+      background: #a51010;
+    }
+    .detail-top {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+    .detail-box {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      padding: var(--spacing-lg);
+    }
+    .detail-box h3 {
+      font-size: var(--font-size-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-primary);
+      margin-bottom: var(--spacing-md);
+      font-weight: 600;
+    }
+    .detail-stats-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .detail-stats-table td {
+      padding: 0.5rem 0.65rem;
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--font-size-base);
+    }
+    .detail-stats-table tr:last-child td {
+      border-bottom: none;
+    }
+    .detail-stats-table td:first-child {
+      color: var(--color-text-muted);
+      font-weight: 500;
+      width: 45%;
+    }
+    .detail-stats-table td:last-child {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+    .radar-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .radar-container canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    .detail-bottom {
+      margin-top: var(--spacing-lg);
+    }
+    .buzz-table th {
+      background: var(--color-bg);
+      color: var(--color-text-muted);
+      padding: 0.55rem 0.75rem;
+      font-weight: 600;
+      font-size: var(--font-size-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .buzz-table td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--font-size-sm);
+    }
+    .buzz-table td.num { font-variant-numeric: tabular-nums; }
+    .buzz-table tr:hover td { background: var(--color-secondary); }
+    .buzz-table tr:last-child td { border-bottom: none; }
+    .buzz-value-10 { color: var(--color-primary); font-weight: 700; }
+    .buzz-value-neg { color: #d45d5d; font-weight: 600; }
+    .buzz-value-0 { color: var(--color-text-muted); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Quizbowl Stats</h1>
+  </header>
+
+  <nav>
+    <button class="active" data-panel="teams">Teams</button>
+    <button data-panel="players">Players</button>
+    <button data-panel="compare">Compare</button>
+  </nav>
+
+  <main>
+    <div id="teams" class="panel active">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="team-search" placeholder="Search teams...">
+      </div>
+      <div class="table-wrap">
+        <table id="team-table">
+          <thead>
+            <tr>
+              <th data-sort="rank" style="width:30px;">#</th>
+              <th data-sort="team_name">Team</th>
+              <th data-sort="GP" class="num" style="width:28px;">GP</th>
+              <th data-sort="W" class="num" style="width:28px;">W</th>
+              <th data-sort="L" class="num" style="width:28px;">L</th>
+              <th data-sort="tuh" class="num" style="width:36px;">TUH</th>
+              <th data-sort="gets" class="num" style="width:36px;">Gets</th>
+              <th data-sort="negs" class="num" style="width:36px;">Negs</th>
+              <th data-sort="total_points" class="num" style="width:50px;">Pts</th>
+              <th data-sort="pts_per_20tuh" class="num" style="width:75px;">Pts/20TUH</th>
+              <th data-sort="bpa" class="num" style="width:50px;">BPA</th>
+              <th data-sort="bonus_points" class="num" style="width:50px;">Bonus</th>
+              <th data-sort="points_per_bonus" class="num" style="width:60px;">Pts/B</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="players" class="panel">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="player-search" placeholder="Search players...">
+      </div>
+      <div class="table-wrap">
+        <table id="player-table">
+          <thead>
+            <tr>
+              <th data-sort="pts_per_20tuh" style="width:30px;">#</th>
+              <th data-sort="last_name">Player</th>
+              <th data-sort="team_id">Team</th>
+              <th data-sort="GP" class="num" style="width:36px;">GP</th>
+              <th data-sort="tuh" class="num" style="width:44px;">TUH</th>
+              <th data-sort="gets" class="num" style="width:36px;">Gets</th>
+              <th data-sort="negs" class="num" style="width:36px;">Negs</th>
+              <th data-sort="total_points" class="num" style="width:50px;">Pts</th>
+              <th data-sort="pts_per_20tuh" class="num" style="width:75px;">Pts/20TUH</th>
+              <th data-sort="bpa" class="num" style="width:50px;">BPA</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="compare" class="panel">
+      <div class="compare-layout">
+        <div class="compare-selectors">
+          <div class="compare-selector-col">
+            <h3>Left Side</h3>
+            <label for="compare-type-a">Type</label>
+            <select id="compare-type-a">
+              <option value="player">Player</option>
+              <option value="team">Team</option>
+            </select>
+            <label for="compare-select-a">Select</label>
+            <select id="compare-select-a"><option value="">— Choose —</option></select>
+          </div>
+          <div class="vs-badge">VS</div>
+          <div class="compare-selector-col">
+            <h3>Right Side</h3>
+            <label for="compare-type-b">Type</label>
+            <select id="compare-type-b">
+              <option value="player">Player</option>
+              <option value="team">Team</option>
+            </select>
+            <label for="compare-select-b">Select</label>
+            <select id="compare-select-b"><option value="">— Choose —</option></select>
+          </div>
+        </div>
+        <div class="compare-result" id="compare-result">
+          <table class="compare-table" id="compare-table">
+            <thead>
+              <tr>
+                <th id="compare-header-a">—</th>
+                <th>Stat</th>
+                <th id="compare-header-b">—</th>
+              </tr>
+            </thead>
+            <tbody id="compare-table-body"></tbody>
+          </table>
+        </div>
+        <div class="compare-empty" id="compare-empty">
+          <div class="empty-icon">⚖️</div>
+          <div>Select two players or teams above to compare</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="team-detail" class="detail-page">
+      <div class="detail-header">
+        <button class="detail-back" id="detail-back-btn">← Back</button>
+        <h2 id="detail-team-name">—</h2>
+      </div>
+      <div class="detail-top">
+        <div class="detail-box">
+          <h3>Basic Stats</h3>
+          <table class="detail-stats-table" id="detail-stats-table">
+            <!-- Populated by JS -->
+          </table>
+        </div>
+        <div class="detail-box">
+          <h3>BPA by Category</h3>
+          <div class="radar-container">
+            <canvas id="radar-chart" width="400" height="400"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="detail-bottom">
+        <div class="table-wrap">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th class="num">Pts/20TUH</th>
+                <th class="num">BPA</th>
+                <th>Visual</th>
+              </tr>
+            </thead>
+            <tbody id="detail-cat-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="detail-bottom">
+        <h3 style="font-size:var(--font-size-sm);text-transform:uppercase;letter-spacing:0.5px;color:var(--color-primary);margin-bottom:0.75rem;font-weight:600;">Buzz Log</h3>
+        <div class="table-wrap" style="max-height:500px;overflow-y:auto;">
+          <table class="buzz-table" id="buzz-table">
+            <thead>
+              <tr>
+                <th style="width:40px;cursor:pointer;" data-buzz-sort="tossup_id"># <span class="sort-arrow"></span></th>
+                <th style="cursor:pointer;" data-buzz-sort="category">Category <span class="sort-arrow"></span></th>
+                <th>Answer</th>
+                <th style="cursor:pointer;" data-buzz-sort="player_name">Player <span class="sort-arrow"></span></th>
+                <th class="num" style="width:40px;cursor:pointer;" data-buzz-sort="value">Val <span class="sort-arrow"></span></th>
+                <th class="num" style="width:60px;cursor:pointer;" data-buzz-sort="buzzpoint">Word <span class="sort-arrow"></span></th>
+              </tr>
+            </thead>
+            <tbody id="buzz-table-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Detail Page -->
+    <div id="player-detail" class="detail-page">
+      <div class="detail-header">
+        <button class="detail-back" id="player-detail-back-btn">← Back</button>
+        <h2 id="detail-player-name">—</h2>
+      </div>
+      <div class="detail-top">
+        <div class="detail-box">
+          <h3>Basic Stats</h3>
+          <table class="detail-stats-table" id="player-detail-stats-table">
+            <!-- Populated by JS -->
+          </table>
+        </div>
+        <div class="detail-box">
+          <h3>BPA by Category</h3>
+          <div class="radar-container">
+            <canvas id="player-radar-chart" width="400" height="400"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="detail-bottom">
+        <div class="table-wrap">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th class="num">Pts/20TUH</th>
+                <th class="num">BPA</th>
+                <th>Visual</th>
+              </tr>
+            </thead>
+            <tbody id="player-detail-cat-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="detail-bottom">
+        <h3 style="font-size:var(--font-size-sm);text-transform:uppercase;letter-spacing:0.5px;color:var(--color-primary);margin-bottom:0.75rem;font-weight:600;">Buzz Log</h3>
+        <div class="table-wrap" style="max-height:500px;overflow-y:auto;">
+          <table class="buzz-table" id="player-buzz-table">
+            <thead>
+              <tr>
+                <th style="width:40px;cursor:pointer;" data-buzz-sort="tossup_id"># <span class="sort-arrow"></span></th>
+                <th style="cursor:pointer;" data-buzz-sort="category">Category <span class="sort-arrow"></span></th>
+                <th>Answer</th>
+                <th style="cursor:pointer;" data-buzz-sort="player_name">Player <span class="sort-arrow"></span></th>
+                <th class="num" style="width:40px;cursor:pointer;" data-buzz-sort="value">Val <span class="sort-arrow"></span></th>
+                <th class="num" style="width:60px;cursor:pointer;" data-buzz-sort="buzzpoint">Word <span class="sort-arrow"></span></th>
+              </tr>
+            </thead>
+            <tbody id="player-buzz-table-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Will be populated by loading stats.json
+    let teamsData = [];
+    let playersData = [];
+    let tossupsData = {};
+
+    let globalMaxTeamPts = 1;
+    let globalMaxPlayerPts = 1;
+    let teamCatMax = {};
+    let playerCatMax = {};
+
+    // --- Shared constants & helpers ---
+    const CATEGORIES = ['Literature', 'History', 'Science', 'Fine Arts', 'Belief', 'Thought', 'Other'];
+    const NUM_SORT_KEYS = new Set(['gets','negs','total_points','pts_per_20tuh','bpa','bonus_points','points_per_bonus','GP','tuh']);
+
+    // Escape a value for safe insertion into innerHTML.
+    function esc(v) {
+      return String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
+    // Map of team_id -> team_name.
+    function buildTeamMap() {
+      const teamMap = {};
+      teamsData.forEach(t => { teamMap[t.team_id] = t.team_name; });
+      return teamMap;
+    }
+
+    // Per-category max absolute BPA across a dataset, for bar/radar scaling.
+    function computeCatMax(dataset) {
+      const maxByCat = {};
+      CATEGORIES.forEach(cat => {
+        let max = 0;
+        dataset.forEach(item => {
+          const v = item.bpa_by_cat?.[cat];
+          if (v !== undefined && Math.abs(v) > max) max = Math.abs(v);
+        });
+        maxByCat[cat] = max || 1;
+      });
+      return maxByCat;
+    }
+
+    // Render a [label, value] list into a detail-stats table.
+    function renderDetailStats(tableId, stats) {
+      document.getElementById(tableId).innerHTML = stats.map(([label, value]) => `
+        <tr>
+          <td>${esc(label)}</td>
+          <td>${esc(value)}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Build the inner category-breakdown rows shown when an inline table row is expanded.
+    // includePPB adds the per-category Pts/Bonus column (teams only).
+    function buildInlineCatRows(item, catMax, includePPB) {
+      const catData = item.bpa_by_cat || {};
+      const ptsData = item.pts_per_20tuh_by_cat || {};
+      let rows = '';
+      for (const cat of CATEGORIES) {
+        const bpa = catData[cat];
+        if (bpa === undefined) continue;
+        const pts = ptsData[cat] ?? '—';
+        const barClass = bpa >= 0 ? 'positive' : 'negative';
+        const cMax = catMax?.[cat] || Math.abs(bpa) || 1;
+        const barWidth = Math.abs(bpa) / cMax * 100;
+        const ppbCell = includePPB
+          ? `<td class="num">${typeof item.points_per_bonus_by_cat?.[cat] === 'number' ? item.points_per_bonus_by_cat[cat].toFixed(1) : '—'}</td>`
+          : '';
+        rows += `
+          <tr>
+            <td>${cat}</td>
+            <td class="num">${typeof pts === 'number' ? pts.toFixed(2) : pts}</td>
+            <td class="num">${typeof bpa === 'number' ? bpa.toFixed(2) : bpa}</td>
+            <td style="width:300px;">
+              <div class="cat-bar-wrap">
+                <div class="cat-bar"><div class="cat-bar-fill ${barClass}" style="width:${barWidth}%"></div></div>
+              </div>
+            </td>
+            ${ppbCell}
+          </tr>`;
+      }
+      return rows;
+    }
+
+    // --- View switching helpers ---
+    function clearActiveViews() {
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.detail-page').forEach(d => d.classList.remove('active'));
+    }
+    function showPanel(panelId) {
+      clearActiveViews();
+      const btn = document.querySelector(`nav button[data-panel="${panelId}"]`);
+      if (btn) btn.classList.add('active');
+      document.getElementById(panelId).classList.add('active');
+    }
+    function showDetailPage(detailId) {
+      clearActiveViews();
+      document.getElementById(detailId).classList.add('active');
+    }
+
+    // --- Panel switching ---
+    document.querySelectorAll('nav button').forEach(btn => {
+      btn.addEventListener('click', () => showPanel(btn.dataset.panel));
+    });
+
+    // --- Team detail page ---
+    let currentTeamId = null;
+
+    function renderTeamDetail(team) {
+      if (!team) return;
+
+      showDetailPage('team-detail');
+      document.getElementById('detail-team-name').textContent = team.team_name;
+
+      // Render basic stats
+      const stats = [
+        ['Final Placement', team.rank],
+        ['Games Played', team.GP],
+        ['Record', `${team.W}W-${team.L}L`],
+	['Total Points', team.total_points],
+        ['PP20TUH', team.pts_per_20tuh.toFixed(2)],
+	['Tossups Heard', team.TUH],
+        ['10', team.gets],
+        ['-5', team.negs],
+        ['Tossup Points', team.total_points - team.bonus_points],
+	['BPA', team.bpa.toFixed(2)],
+        ['Bonus Points', team.bonus_points],
+	['PPB', team.points_per_bonus.toFixed(2)]
+      ];
+
+      renderDetailStats('detail-stats-table', stats);
+
+      // Compute per-category max from all teams, then draw radar + category bars
+      const maxByCat = computeCatMax(teamsData);
+      drawRadarChart('team', team.bpa_by_cat || {}, maxByCat);
+      renderDetailCatBars('team', team, maxByCat);
+      // Reset sort arrows on buzz table
+      document.querySelectorAll('#buzz-table th .sort-arrow').forEach(a => a.textContent = '');
+
+      // Render buzz log
+      renderBuzzes('team', team);
+    }
+
+    // Render the category breakdown table on a detail page (team or player).
+    function renderDetailCatBars(kind, item, maxByCat) {
+      const catData = item.bpa_by_cat || {};
+      const ptsData = item.pts_per_20tuh_by_cat || {};
+      const tbody = document.querySelector(kind === 'team' ? '#detail-cat-body' : '#player-detail-cat-body');
+      tbody.innerHTML = '';
+
+      CATEGORIES.forEach(cat => {
+        const bpa = catData[cat];
+        if (bpa === undefined) return;
+        const pts = ptsData[cat];
+        const barClass = bpa >= 0 ? 'positive' : 'negative';
+        const catMax = maxByCat[cat] || Math.abs(bpa) || 1;
+        const barWidth = Math.abs(bpa) / catMax * 100;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${cat}</td>
+          <td class="num">${typeof pts === 'number' ? pts.toFixed(2) : pts}</td>
+          <td class="num">${bpa.toFixed(2)}</td>
+          <td style="width:300px;">
+            <div class="cat-bar-wrap">
+              <div class="cat-bar"><div class="cat-bar-fill ${barClass}" style="width:${barWidth}%"></div></div>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // --- Buzz log sorting ---
+    let buzzSortState = { key: 'tossup_id', dir: 'asc' };
+
+    function doBuzzSort(buzzes, key, dir) {
+      return [...buzzes].sort((a, b) => {
+        let va = a[key], vb = b[key];
+        // Numeric fields
+        if (key === 'tossup_id' || key === 'value' || key === 'buzzpoint') {
+          va = va == null ? (key === 'buzzpoint' ? Infinity : -Infinity) : Number(va);
+          vb = vb == null ? (key === 'buzzpoint' ? Infinity : -Infinity) : Number(vb);
+        }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    // Render the buzz log on a detail page (team or player).
+    function renderBuzzes(kind, item) {
+      const tbodyId = kind === 'team' ? 'buzz-table-body' : 'player-buzz-table-body';
+      const tableSel = kind === 'team' ? '#buzz-table' : '#player-buzz-table';
+      const matches = kind === 'team'
+        ? (buzz => buzz.team_id === item.team_id)
+        : (buzz => buzz.player_id === item.player_id);
+      const tbody = document.getElementById(tbodyId);
+      tbody.innerHTML = '';
+
+      // Flatten matching buzzes into a single array with tossup metadata
+      const allBuzzes = [];
+      Object.values(tossupsData).forEach(tossup => {
+        tossup.buzzes.forEach(buzz => {
+          if (!matches(buzz)) return;
+          allBuzzes.push({
+            tossup_id: tossup.tossup_id,
+            category: tossup.category,
+            answer: tossup.answer,
+            player_name: buzz.player_name,
+            value: buzz.value,
+            buzzpoint: buzz.buzzpoint,
+          });
+        });
+      });
+
+      if (allBuzzes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:1.5rem;">No buzzes recorded</td></tr>';
+        return;
+      }
+
+      // Sort
+      const sorted = doBuzzSort(allBuzzes, buzzSortState.key, buzzSortState.dir);
+
+      // Render
+      sorted.forEach(buzz => {
+        const valueClass = buzz.value === 10 ? 'buzz-value-10' :
+                           buzz.value < 0 ? 'buzz-value-neg' : 'buzz-value-0';
+        const valueLabel = buzz.value === 10 ? '10' :
+                           buzz.value < 0 ? '-5' : '0';
+        const word = buzz.buzzpoint != null ? buzz.buzzpoint : '—';
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="num">${buzz.tossup_id}</td>
+          <td>${esc(buzz.category)}</td>
+          <td>${esc(buzz.answer)}</td>
+          <td>${esc(buzz.player_name)}</td>
+          <td class="num ${valueClass}">${valueLabel}</td>
+          <td class="num">${esc(word)}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      // Show sort arrow (scoped to this detail page's buzz table)
+      document.querySelectorAll(`${tableSel} th .sort-arrow`).forEach(a => a.textContent = '');
+      const activeTh = document.querySelector(`${tableSel} th[data-buzz-sort="${buzzSortState.key}"]`);
+      if (activeTh) {
+        activeTh.querySelector('.sort-arrow').textContent = buzzSortState.dir === 'asc' ? ' ▲' : ' ▼';
+      }
+    }
+
+    // Buzz table header click handlers (re-render whichever detail page is active)
+    document.querySelectorAll('th[data-buzz-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.buzzSort;
+        if (buzzSortState.key === key) {
+          buzzSortState.dir = buzzSortState.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          buzzSortState = { key, dir: 'desc' };
+        }
+        if (document.getElementById('team-detail').classList.contains('active') && currentTeamId) {
+          const team = teamsData.find(t => t.team_id == currentTeamId);
+          if (team) renderBuzzes('team', team);
+        } else if (document.getElementById('player-detail').classList.contains('active') && currentPlayerId) {
+          const player = playersData.find(p => p.player_id == currentPlayerId);
+          if (player) renderBuzzes('player', player);
+        }
+      });
+    });
+
+    const radarCharts = { team: null, player: null };
+
+    // --- Player detail page ---
+    let currentPlayerId = null;
+
+    function renderPlayerDetail(player) {
+      if (!player) return;
+
+      showDetailPage('player-detail');
+      document.getElementById('detail-player-name').textContent = player.first_name + ' ' + player.last_name;
+
+      // Render basic stats
+      const teamMap = buildTeamMap();
+      const stats = [
+        ['Team', teamMap[player.team_id] || player.team_id],
+        ['Games Played', player.GP],
+        ['Tossups Heard', player.tuh],
+        ['10', player.gets],
+        ['-5', player.negs],
+        ['Total Points', player.total_points],
+        ['PP20TUH', player.pts_per_20tuh.toFixed(2)],
+        ['BPA', player.bpa.toFixed(2)]
+      ];
+
+      renderDetailStats('player-detail-stats-table', stats);
+
+      // Compute per-category max from all players, then draw radar + category bars
+      const maxByCat = computeCatMax(playersData);
+      drawRadarChart('player', player.bpa_by_cat || {}, maxByCat);
+      renderDetailCatBars('player', player, maxByCat);
+      // Reset sort arrows on buzz table
+      document.querySelectorAll('#player-buzz-table th .sort-arrow').forEach(a => a.textContent = '');
+
+      // Render buzz log
+      renderBuzzes('player', player);
+    }
+
+    // Draw the BPA-by-category radar chart on a detail page (team or player).
+    function drawRadarChart(kind, catData, maxByCat) {
+      // Destroy previous chart instance for this page
+      if (radarCharts[kind]) {
+        radarCharts[kind].destroy();
+        radarCharts[kind] = null;
+      }
+
+      const canvas = document.getElementById(kind === 'team' ? 'radar-chart' : 'player-radar-chart');
+      const ctx = canvas.getContext('2d');
+
+      // Get categories that have data
+      const cats = CATEGORIES.filter(cat => catData[cat] !== undefined);
+      if (cats.length === 0) return;
+
+      // Normalize values to 0-1 scale for Chart.js (Chart.js uses uniform axes)
+      const values = cats.map(cat => {
+        const max = maxByCat?.[cat] || Math.abs(catData[cat]) || 1;
+        return Math.abs(catData[cat]) / max;
+      });
+
+      radarCharts[kind] = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: cats,
+          datasets: [{
+            label: 'BPA',
+            data: values,
+            backgroundColor: 'rgba(139, 0, 0, 0.2)',
+            borderColor: '#8b0000',
+            borderWidth: 2,
+            pointBackgroundColor: '#8b0000',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0,
+              max: 1,
+              ticks: {
+                stepSize: 0.2,
+                callback: function(value) {
+                  return Math.round(value * 100) + '%';
+                },
+                font: {
+                  size: 10
+                },
+                color: '#636e72'
+              },
+              grid: {
+                color: '#e9ecef'
+              },
+              angleLines: {
+                color: '#e9ecef'
+              },
+              pointLabels: {
+                font: {
+                  size: 12
+                },
+                color: '#636e72'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const cat = context.label;
+                  const rawVal = catData[cat];
+                  return rawVal.toFixed(2);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Back button handlers
+    document.getElementById('detail-back-btn').addEventListener('click', () => {
+      currentTeamId = null;
+      window.history.pushState({}, '', window.location.pathname);
+      showPanel('teams');
+    });
+
+    document.getElementById('player-detail-back-btn').addEventListener('click', () => {
+      currentPlayerId = null;
+      window.history.pushState({}, '', window.location.pathname);
+      showPanel('players');
+    });
+
+    // --- Sort logic ---
+    // Restore sort state from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const savedSort = urlParams.get('sort');
+    const savedDir = urlParams.get('dir');
+    let sortState = { key: 'bpa', dir: 'desc' };
+    if (savedSort && NUM_SORT_KEYS.has(savedSort)) {
+      sortState = { key: savedSort, dir: savedDir === 'asc' ? 'asc' : 'desc' };
+    }
+
+    function doSort(data, key, dir) {
+      return [...data].sort((a, b) => {
+        let va = a[key], vb = b[key];
+        if (NUM_SORT_KEYS.has(key)) { va = Number(va); vb = Number(vb); }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    function applySort() {
+      const { key, dir } = sortState;
+      document.querySelectorAll('th .sort-arrow').forEach(a => a.remove());
+      const activeTh = document.querySelector(`th[data-sort="${key}"]`);
+      if (activeTh) {
+        const arrow = document.createElement('span');
+        arrow.className = 'sort-arrow';
+        arrow.textContent = dir === 'asc' ? '▲' : '▼';
+        activeTh.appendChild(arrow);
+      }
+
+      const activePanel = document.querySelector('.panel.active');
+      if (activePanel.id === 'teams') {
+        renderTeams(doSort(teamsData, key, dir), globalMaxTeamPts, teamCatMax);
+      } else {
+        renderPlayers(doSort(playersData, key, dir), globalMaxPlayerPts, playerCatMax);
+      }
+
+      // Persist sort state to URL
+      const params = new URLSearchParams(window.location.search);
+      params.set('sort', key);
+      params.set('dir', dir);
+      history.replaceState(null, '', '?' + params.toString());
+    }
+
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.style.cursor = 'pointer';
+      th.addEventListener('click', () => {
+        const key = th.dataset.sort;
+        if (sortState.key === key) {
+          sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortState = { key, dir: 'desc' };
+        }
+        applySort();
+      });
+    });
+
+    // --- Render teams ---
+    function renderTeams(data, globalMaxPts, teamCatMax) {
+      const tbody = document.querySelector('#team-table tbody');
+      tbody.innerHTML = '';
+
+      data.forEach((t, i) => {
+        const rank = i + 1;
+        const rankClass = rank <= 3 ? 'top3' : '';
+        const finClass = t.rank <= 3 ? 'top3' : '';
+
+        // Main row
+        const row = document.createElement('tr');
+        row.className = 'main-row';
+        row.dataset.teamId = t.team_id;
+        row.innerHTML = `
+          <td class="num"><span class="rank-num ${finClass}">${t.rank}</span></td>
+          <td class="name-cell" style="cursor:pointer;"><span class="expand-icon">▶</span>${esc(t.team_name)}</td>
+          <td class="num">${t.GP}</td>
+          <td class="num">${t.W}</td>
+          <td class="num">${t.L}</td>
+          <td class="num">${t.TUH}</td>
+          <td class="num">${t.gets}</td>
+          <td class="num">${t.negs}</td>
+          <td class="num">${t.total_points}</td>
+          <td class="num">${t.pts_per_20tuh.toFixed(2)}</td>
+          <td class="num">${t.bpa.toFixed(2)}</td>
+          <td class="num">${t.bonus_points}</td>
+          <td class="num">${t.points_per_bonus.toFixed(1)}</td>
+        `;
+        tbody.appendChild(row);
+
+        // Detail row
+        const detailRow = document.createElement('tr');
+        detailRow.className = 'detail-row';
+        detailRow.dataset.detailFor = t.team_id;
+        const catRows = buildInlineCatRows(t, teamCatMax, true);
+        detailRow.innerHTML = `
+          <td colspan="13">
+            <div class="detail-inner">
+              <h4>Category Breakdown</h4>
+              <table class="detail-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th class="num">Pts/20TUH</th>
+                    <th class="num">BPA</th>
+                    <th>Visual</th>
+                    <th class="num">PPB</th>
+                  </tr>
+                </thead>
+                <tbody>${catRows}</tbody>
+              </table>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(detailRow);
+      });
+
+      // Click handlers
+      tbody.querySelectorAll('.main-row').forEach(r => {
+        r.addEventListener('click', (e) => {
+          // Check if clicking on expand icon (first child)
+          if (e.target.closest('.expand-icon')) {
+            toggleDetail(r);
+          } else {
+            // Navigate to team detail page
+            const teamId = r.dataset.teamId;
+            const team = teamsData.find(t => t.team_id == teamId);
+            if (team) {
+              currentTeamId = teamId;
+              window.history.pushState({}, '', `?team=${teamId}`);
+              renderTeamDetail(team);
+            }
+          }
+        });
+      });
+    }
+
+    // --- Toggle expand/collapse ---
+    function toggleDetail(mainRow) {
+      const id = mainRow.dataset.teamId || mainRow.dataset.playerId;
+      const detail = document.querySelector(`.detail-row[data-detail-for="${id}"]`);
+      const icon = mainRow.querySelector('.expand-icon');
+      if (!detail) return;
+      const isOpen = detail.classList.contains('open');
+      detail.classList.toggle('open');
+      if (icon) icon.classList.toggle('expanded');
+    }
+
+    // --- Render players ---
+    function renderPlayers(data, globalMaxPts, playerCatMax) {
+      const tbody = document.querySelector('#player-table tbody');
+      tbody.innerHTML = '';
+      const teamMap = buildTeamMap();
+
+      data.forEach((p, i) => {
+        const rank = i + 1;
+        const rankClass = rank <= 3 ? 'top3' : '';
+
+        // Main row
+        const row = document.createElement('tr');
+        row.className = 'main-row';
+        row.dataset.playerId = p.player_id;
+        row.innerHTML = `
+          <td class="num"><span class="rank-num ${rankClass}">${rank}</span></td>
+          <td class="name-cell" style="cursor:pointer;"><span class="expand-icon">▶</span>${esc(p.first_name)} ${esc(p.last_name)}</td>
+          <td>${esc(teamMap[p.team_id] || p.team_id)}</td>
+          <td class="num">${p.GP}</td>
+          <td class="num">${p.tuh}</td>
+          <td class="num">${p.gets}</td>
+          <td class="num">${p.negs}</td>
+          <td class="num">${p.total_points}</td>
+          <td class="num">${p.pts_per_20tuh.toFixed(2)}</td>
+          <td class="num">${p.bpa.toFixed(2)}</td>
+        `;
+        tbody.appendChild(row);
+
+        // Detail row
+        const detailRow = document.createElement('tr');
+        detailRow.className = 'detail-row';
+        detailRow.dataset.detailFor = p.player_id;
+        const catRows = buildInlineCatRows(p, playerCatMax, false);
+        detailRow.innerHTML = `
+          <td colspan="10">
+            <div class="detail-inner">
+              <h4>Category Breakdown</h4>
+              <table class="detail-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th class="num">Pts/20TUH</th>
+                    <th class="num">BPA</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>${catRows}</tbody>
+              </table>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(detailRow);
+      });
+
+      // Click handlers - open player detail page
+      tbody.querySelectorAll('.main-row').forEach(r => {
+        r.addEventListener('click', () => {
+          const playerId = r.dataset.playerId;
+          currentPlayerId = playerId;
+          const player = playersData.find(p => p.player_id == playerId);
+          if (player) renderPlayerDetail(player);
+        });
+      });
+    }
+
+    // --- Search ---
+    document.getElementById('team-search').addEventListener('input', e => {
+      const q = e.target.value.toLowerCase();
+      const filtered = teamsData.filter(t => t.team_name.toLowerCase().includes(q));
+      renderTeams(filtered, globalMaxTeamPts, teamCatMax);
+    });
+
+    document.getElementById('player-search').addEventListener('input', e => {
+      const q = e.target.value.toLowerCase();
+      const filtered = playersData.filter(p =>
+        (p.first_name + ' ' + p.last_name).toLowerCase().includes(q)
+      );
+      renderPlayers(filtered, globalMaxPlayerPts, playerCatMax);
+    });
+
+    // --- Compare panel ---
+    const compareTypeA = document.getElementById('compare-type-a');
+    const compareTypeB = document.getElementById('compare-type-b');
+    const compareSelectA = document.getElementById('compare-select-a');
+    const compareSelectB = document.getElementById('compare-select-b');
+    const compareResult = document.getElementById('compare-result');
+    const compareEmpty = document.getElementById('compare-empty');
+    const compareTable = document.getElementById('compare-table');
+    const compareTableBody = document.getElementById('compare-table-body');
+    const compareHeaderA = document.getElementById('compare-header-a');
+    const compareHeaderB = document.getElementById('compare-header-b');
+
+    function populateCompareDropdown(selectEl, type) {
+      selectEl.innerHTML = '<option value="">— Choose —</option>';
+      const items = type === 'player' ? playersData : teamsData;
+      items.forEach(item => {
+        const opt = document.createElement('option');
+        if (type === 'player') {
+          opt.value = item.player_id;
+          opt.textContent = `${item.last_name}, ${item.first_name}`;
+        } else {
+          opt.value = item.team_id;
+          opt.textContent = item.team_name;
+        }
+        selectEl.appendChild(opt);
+      });
+    }
+
+    function getCompareLabel(item, type) {
+      if (type === 'player') {
+        return `${item.first_name} ${item.last_name}`;
+      }
+      return item.team_name;
+    }
+
+    function getCompareSublabel(item, type) {
+      if (type === 'player') {
+        return buildTeamMap()[item.team_id] || '';
+      }
+      return '';
+    }
+
+    function renderCompare() {
+      const aType = compareTypeA.value;
+      const bType = compareTypeB.value;
+      const aVal = compareSelectA.value;
+      const bVal = compareSelectB.value;
+
+      if (!aVal || !bVal) {
+        compareResult.classList.remove('visible');
+        compareEmpty.style.display = 'block';
+        return;
+      }
+
+      const aItem = aType === 'team' ? teamsData.find(t => t.team_id == aVal) : playersData.find(p => p.player_id == aVal);
+      const bItem = bType === 'team' ? teamsData.find(t => t.team_id == bVal) : playersData.find(p => p.player_id == bVal);
+
+      if (!aItem || !bItem) return;
+
+      populateCompareDropdown(compareSelectA, aType);
+      populateCompareDropdown(compareSelectB, bType);
+      compareSelectA.value = aVal;
+      compareSelectB.value = bVal;
+
+      // Update headers
+      compareHeaderA.innerHTML = esc(getCompareLabel(aItem, aType)) + (aType === 'player' ? ` <small style="opacity:0.7;font-weight:400">${esc(getCompareSublabel(aItem, aType))}</small>` : '');
+      compareHeaderB.innerHTML = esc(getCompareLabel(bItem, bType)) + (bType === 'player' ? ` <small style="opacity:0.7;font-weight:400">${esc(getCompareSublabel(bItem, bType))}</small>` : '');
+
+      // Main stats
+      const stats = [];
+      if (aType === 'player') {
+        stats.push(
+          { label: 'GP', aKey: 'GP', bKey: 'GP' },
+          { label: 'TUH', aKey: 'tuh', bKey: 'tuh' },
+          { label: '10', aKey: 'gets', bKey: 'gets' },
+          { label: '-5', aKey: 'negs', bKey: 'negs' },
+          { label: 'PPG', aKey: 'pts_per_20tuh', bKey: 'pts_per_20tuh', aFmt: v => v.toFixed(2), bFmt: v => v.toFixed(2) },
+          { label: 'BPA', aKey: 'bpa', bKey: 'bpa', aFmt: v => v.toFixed(2), bFmt: v => v.toFixed(2) }
+        );
+      } else {
+        stats.push(
+          { label: '10', aKey: 'gets', bKey: 'gets' },
+          { label: '-5', aKey: 'negs', bKey: 'negs' },
+          { label: 'PPG', aKey: 'pts_per_20tuh', bKey: 'pts_per_20tuh', aFmt: v => v.toFixed(2), bFmt: v => v.toFixed(2) },
+          { label: 'BPA', aKey: 'bpa', bKey: 'bpa', aFmt: v => v.toFixed(2), bFmt: v => v.toFixed(2) },
+          { label: 'PPB', aKey: 'points_per_bonus', bKey: 'points_per_bonus', aFmt: v => v.toFixed(2), bFmt: v => v.toFixed(2) }
+        );
+      }
+
+      let html = '';
+      stats.forEach(s => {
+        const aNum = aItem[s.aKey] ?? 0;
+        const bNum = bItem[s.bKey] ?? 0;
+        const aStr = s.aFmt ? s.aFmt(aNum) : aNum;
+        const bStr = s.bFmt ? s.bFmt(bNum) : bNum;
+        const isNeg = s.label === '-5';
+        const aIsWinner = isNeg ? aNum < bNum : aNum > bNum;
+        const bIsWinner = isNeg ? bNum < aNum : bNum > aNum;
+        const aCls = aIsWinner ? 'winner' : 'loser';
+        const bCls = bIsWinner ? 'winner' : 'loser';
+        html += `<tr>
+          <td class="left-val ${aCls}">${aStr}</td>
+          <td class="center-label">${s.label}</td>
+          <td class="right-val ${bCls}">${bStr}</td>
+        </tr>`;
+      });
+
+      // Category breakdown
+      const allCats = new Set([
+        ...(aItem.bpa_by_cat ? Object.keys(aItem.bpa_by_cat) : []),
+        ...(bItem.bpa_by_cat ? Object.keys(bItem.bpa_by_cat) : [])
+      ]);
+      if (allCats.size > 0) {
+        html += `<tr class="compare-cat-section"><td colspan="3"><h4>Category Breakdown</h4></td></tr>`;
+        CATEGORIES.forEach(cat => {
+          if (!allCats.has(cat)) return;
+          const aCat = aItem.bpa_by_cat?.[cat] ?? 0;
+          const bCat = bItem.bpa_by_cat?.[cat] ?? 0;
+          const aIsWinner = aCat > bCat;
+          const bIsWinner = bCat > aCat;
+          const aCls = aIsWinner ? 'winner' : 'loser';
+          const bCls = bIsWinner ? 'winner' : 'loser';
+          html += `<tr class="compare-cat-row">
+            <td class="left-val ${aCls}">${aCat.toFixed(2)}</td>
+            <td class="center-label">${cat}</td>
+            <td class="right-val ${bCls}">${bCat.toFixed(2)}</td>
+          </tr>`;
+        });
+      }
+
+      compareTableBody.innerHTML = html;
+      compareResult.classList.add('visible');
+      compareEmpty.style.display = 'none';
+    }
+
+    function persistCompareState() {
+      const params = new URLSearchParams(window.location.search);
+      params.set('typeA', compareTypeA.value);
+      params.set('a', compareSelectA.value);
+      params.set('typeB', compareTypeB.value);
+      params.set('b', compareSelectB.value);
+      history.replaceState(null, '', '?' + params.toString());
+    }
+
+    compareTypeA.addEventListener('change', () => {
+      populateCompareDropdown(compareSelectA, compareTypeA.value);
+      compareSelectA.value = '';
+      renderCompare();
+      persistCompareState();
+    });
+    compareTypeB.addEventListener('change', () => {
+      populateCompareDropdown(compareSelectB, compareTypeB.value);
+      compareSelectB.value = '';
+      renderCompare();
+      persistCompareState();
+    });
+    compareSelectA.addEventListener('change', () => { renderCompare(); persistCompareState(); });
+    compareSelectB.addEventListener('change', () => { renderCompare(); persistCompareState(); });
+
+    // --- Load data ---
+    fetch('stats.json')
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(data => {
+        teamsData = Object.values(data.teams).sort((a, b) => b.pts_per_20tuh - a.pts_per_20tuh);
+        playersData = Object.values(data.players).sort((a, b) => b.pts_per_20tuh - a.pts_per_20tuh);
+        tossupsData = data.tossups || {};
+
+        // Compute global max absolute BPA for bar scaling
+        globalMaxTeamPts = 1;
+        teamsData.forEach(t => {
+          Object.values(t.bpa_by_cat || {}).forEach(v => {
+            if (Math.abs(v) > globalMaxTeamPts) globalMaxTeamPts = Math.abs(v);
+          });
+        });
+
+        globalMaxPlayerPts = 1;
+        playersData.forEach(p => {
+          Object.values(p.bpa_by_cat || {}).forEach(v => {
+            if (Math.abs(v) > globalMaxPlayerPts) globalMaxPlayerPts = Math.abs(v);
+          });
+        });
+
+        // Per-category max for teams and players
+        teamCatMax = computeCatMax(teamsData);
+        playerCatMax = computeCatMax(playersData);
+
+        renderTeams(teamsData, globalMaxTeamPts, teamCatMax);
+        renderPlayers(playersData, globalMaxPlayerPts, playerCatMax);
+        applySort();
+        populateCompareDropdown(compareSelectA, 'player');
+        populateCompareDropdown(compareSelectB, 'player');
+
+        // Restore compare state from URL params
+        const savedTypeA = urlParams.get('typeA');
+        const savedA = urlParams.get('a');
+        const savedTypeB = urlParams.get('typeB');
+        const savedB = urlParams.get('b');
+        if (savedTypeA) compareTypeA.value = savedTypeA;
+        if (savedTypeA) populateCompareDropdown(compareSelectA, savedTypeA);
+        if (savedA) compareSelectA.value = savedA;
+        if (savedTypeB) compareTypeB.value = savedTypeB;
+        if (savedTypeB) populateCompareDropdown(compareSelectB, savedTypeB);
+        if (savedA && savedB) renderCompare();
+
+        // Check for team detail page URL parameter
+        const savedTeamId = urlParams.get('team');
+        if (savedTeamId) {
+          const team = teamsData.find(t => t.team_id == savedTeamId);
+          if (team) {
+            currentTeamId = savedTeamId;
+            renderTeamDetail(team);
+          }
+        }
+
+        // Add generation timestamp
+        const footer = document.createElement('p');
+        footer.style.cssText = 'text-align:center;color:#636e72;font-size:0.72rem;margin-top:1.5rem;';
+        const genDate = new Date(data.meta.generated_at);
+        footer.textContent = `Generated ${genDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${genDate.toLocaleTimeString('en-US')}`;
+        document.querySelector('main').appendChild(footer);
+      })
+      .catch(err => {
+        console.error('Failed to load stats.json:', err);
+        const msg = document.createElement('div');
+        msg.style.cssText = 'text-align:center;padding:2rem;color:#8b0000;font-size:1.1rem;';
+        msg.innerHTML = `<strong>Failed to load data.</strong><br><br>${err.message}<br><br>Make sure you're visiting <code>http://localhost:8000</code> (not a file:// URL) and that stats.json is in the same directory.`;
+        document.querySelector('main').appendChild(msg);
+      });
+  </script>
+</body>
+</html>
