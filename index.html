@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quizbowl Stats</title>
+  <title>ACF Nationals 2026</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <style>
     :root {
       /* Color palette */
       --color-primary: #8b0000;
       --color-secondary: #fff5f5;
-      --color-bg: #f4f7f6;
+      --color-bg: #fafafa;
       --color-surface: #ffffff;
       --color-text: #2d3436;
       --color-text-muted: #636e72;
@@ -34,8 +34,8 @@
       /* Borders */
       --radius-sm: 6px;
       --radius-md: 12px;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.05);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -52,7 +52,7 @@
     }
     header h1 {
       font-size: var(--font-size-xl);
-      font-weight: 800;
+      font-weight: 400;
       color: var(--color-primary);
     }
 
@@ -107,7 +107,7 @@
     .search-bar input:focus {
       outline: none;
       border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+      box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.0);
     }
     .search-bar .search-icon { color: var(--color-text-muted); font-size: 1rem; opacity: 0.6; }
 
@@ -202,7 +202,7 @@
       background: var(--color-surface);
       border-radius: var(--radius-sm);
       overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      box-shadow: 0 1px 3px rgba(0,0,0,0);
     }
     .detail-table th {
       background: var(--color-bg);
@@ -301,7 +301,7 @@
     .compare-selector-col select:focus {
       outline: none;
       border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+      box-shadow: 0 0 0 3px rgba(139, 0, 0, 0);
     }
     .vs-badge {
       display: flex;
@@ -548,7 +548,7 @@
 </head>
 <body>
   <header>
-    <h1>Quizbowl Stats</h1>
+    <h1>ACF Nationals 2026</h1>
   </header>
 
   <nav>
