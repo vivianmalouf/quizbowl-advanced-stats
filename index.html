@@ -389,7 +389,6 @@
       margin-bottom: 0;
       padding: 0.6rem 1rem 0.3rem;
       font-weight: 600;
-      background: var(--color-bg);
       text-align: center;
     }
     .compare-cat-row {
@@ -560,7 +559,6 @@
   <main>
     <div id="teams" class="panel active">
       <div class="search-bar">
-        <span class="search-icon">🔍</span>
         <input type="text" id="team-search" placeholder="Search teams...">
       </div>
       <div class="table-wrap">
@@ -573,13 +571,13 @@
               <th data-sort="W" class="num" style="width:28px;">W</th>
               <th data-sort="L" class="num" style="width:28px;">L</th>
               <th data-sort="tuh" class="num" style="width:36px;">TUH</th>
-              <th data-sort="gets" class="num" style="width:36px;">Gets</th>
-              <th data-sort="negs" class="num" style="width:36px;">Negs</th>
+              <th data-sort="gets" class="num" style="width:36px;">10</th>
+              <th data-sort="negs" class="num" style="width:36px;">-5</th>
               <th data-sort="total_points" class="num" style="width:50px;">Pts</th>
-              <th data-sort="pts_per_20tuh" class="num" style="width:75px;">Pts/20TUH</th>
+              <th data-sort="pts_per_20tuh" class="num" style="width:75px;">PPG</th>
               <th data-sort="bpa" class="num" style="width:50px;">BPA</th>
               <th data-sort="bonus_points" class="num" style="width:50px;">Bonus</th>
-              <th data-sort="points_per_bonus" class="num" style="width:60px;">Pts/B</th>
+              <th data-sort="points_per_bonus" class="num" style="width:60px;">PPB</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -589,7 +587,6 @@
 
     <div id="players" class="panel">
       <div class="search-bar">
-        <span class="search-icon">🔍</span>
         <input type="text" id="player-search" placeholder="Search players...">
       </div>
       <div class="table-wrap">
@@ -601,10 +598,10 @@
               <th data-sort="team_id">Team</th>
               <th data-sort="GP" class="num" style="width:36px;">GP</th>
               <th data-sort="tuh" class="num" style="width:44px;">TUH</th>
-              <th data-sort="gets" class="num" style="width:36px;">Gets</th>
-              <th data-sort="negs" class="num" style="width:36px;">Negs</th>
+              <th data-sort="gets" class="num" style="width:36px;">10</th>
+              <th data-sort="negs" class="num" style="width:36px;">-5</th>
               <th data-sort="total_points" class="num" style="width:50px;">Pts</th>
-              <th data-sort="pts_per_20tuh" class="num" style="width:75px;">Pts/20TUH</th>
+              <th data-sort="pts_per_20tuh" class="num" style="width:75px;">PP20TUH</th>
               <th data-sort="bpa" class="num" style="width:50px;">BPA</th>
             </tr>
           </thead>
@@ -651,7 +648,6 @@
           </table>
         </div>
         <div class="compare-empty" id="compare-empty">
-          <div class="empty-icon">⚖️</div>
           <div>Select two players or teams above to compare</div>
         </div>
       </div>
@@ -788,7 +784,7 @@
 
     // --- Shared constants & helpers ---
     const CATEGORIES = ['Literature', 'History', 'Science', 'Fine Arts', 'Belief', 'Thought', 'Other'];
-    const NUM_SORT_KEYS = new Set(['gets','negs','total_points','pts_per_20tuh','bpa','bonus_points','points_per_bonus','GP','tuh']);
+    const NUM_SORT_KEYS = new Set(['gets','negs','total_points','pts_per_20tuh','bpa','bonus_points','points_per_bonus','GP','tuh','rank']);
 
     // Escape a value for safe insertion into innerHTML.
     function esc(v) {
@@ -1188,7 +1184,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const savedSort = urlParams.get('sort');
     const savedDir = urlParams.get('dir');
-    let sortState = { key: 'bpa', dir: 'desc' };
+    let sortState = { key: 'rank', dir: 'asc' };
     if (savedSort && NUM_SORT_KEYS.has(savedSort)) {
       sortState = { key: savedSort, dir: savedDir === 'asc' ? 'asc' : 'desc' };
     }
@@ -1525,7 +1521,7 @@
         ...(bItem.bpa_by_cat ? Object.keys(bItem.bpa_by_cat) : [])
       ]);
       if (allCats.size > 0) {
-        html += `<tr class="compare-cat-section"><td colspan="3"><h4>Category Breakdown</h4></td></tr>`;
+        html += `<tr class="compare-cat-section"><td></td><td class="center-label"><h4>BPA by Category</h4></td><td></td></tr>`;
         CATEGORIES.forEach(cat => {
           if (!allCats.has(cat)) return;
           const aCat = aItem.bpa_by_cat?.[cat] ?? 0;
@@ -1572,7 +1568,7 @@
     compareSelectB.addEventListener('change', () => { renderCompare(); persistCompareState(); });
 
     // --- Load data ---
-    fetch('stats.json')
+    fetch('stats.json?t=' + Date.now())
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
