@@ -1321,7 +1321,10 @@
     // --- Toggle expand/collapse ---
     function toggleDetail(mainRow) {
       const id = mainRow.dataset.teamId || mainRow.dataset.playerId;
-      const detail = document.querySelector(`.detail-row[data-detail-for="${id}"]`);
+      // Scope the lookup to this row's own table body. Team and player IDs are
+      // independent sequences that both start at 1, so a document-wide query
+      // could match a same-numbered detail row in the other table instead.
+      const detail = mainRow.parentElement.querySelector(`.detail-row[data-detail-for="${id}"]`);
       const icon = mainRow.querySelector('.expand-icon');
       if (!detail) return;
       const isOpen = detail.classList.contains('open');
