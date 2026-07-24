@@ -142,6 +142,7 @@
       transition: background 0.2s;
     }
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    th.num { text-align: right; }
     tr:hover td { background: var(--color-secondary); }
 
     .sort-arrow { font-size: 0.65rem; margin-left: 4px; opacity: 0.8; color: var(--color-primary); }
@@ -680,7 +681,7 @@
                 <th>Category</th>
                 <th class="num">Pts/20TUH</th>
                 <th class="num">BPA</th>
-                <th>Visual</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="detail-cat-body">
@@ -739,7 +740,7 @@
                 <th>Category</th>
                 <th class="num">Pts/20TUH</th>
                 <th class="num">BPA</th>
-                <th>Visual</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="player-detail-cat-body">
@@ -836,7 +837,7 @@
         const cMax = catMax?.[cat] || Math.abs(bpa) || 1;
         const barWidth = Math.abs(bpa) / cMax * 100;
         const ppbCell = includePPB
-          ? `<td class="num">${typeof item.points_per_bonus_by_cat?.[cat] === 'number' ? item.points_per_bonus_by_cat[cat].toFixed(1) : '—'}</td>`
+          ? `<td class="num">${typeof item.points_per_bonus_by_cat?.[cat] === 'number' ? item.points_per_bonus_by_cat[cat].toFixed(2) : '—'}</td>`
           : '';
         rows += `
           <tr>
@@ -1266,7 +1267,7 @@
           <td class="num">${t.pts_per_20tuh.toFixed(2)}</td>
           <td class="num">${t.bpa.toFixed(2)}</td>
           <td class="num">${t.bonus_points}</td>
-          <td class="num">${t.points_per_bonus.toFixed(1)}</td>
+          <td class="num">${t.points_per_bonus.toFixed(2)}</td>
         `;
         tbody.appendChild(row);
 
@@ -1285,7 +1286,7 @@
                     <th>Category</th>
                     <th class="num">Pts/20TUH</th>
                     <th class="num">BPA</th>
-                    <th>Visual</th>
+                    <th></th>
                     <th class="num">PPB</th>
                   </tr>
                 </thead>
@@ -1384,11 +1385,15 @@
 
       // Click handlers - open player detail page
       tbody.querySelectorAll('.main-row').forEach(r => {
-        r.addEventListener('click', () => {
-          const playerId = r.dataset.playerId;
-          currentPlayerId = playerId;
-          const player = playersData.find(p => p.player_id == playerId);
-          if (player) renderPlayerDetail(player);
+        r.addEventListener('click', (e) => {
+          if (e.target.closest('.expand-icon')) {
+            toggleDetail(r);
+          } else {
+            const playerId = r.dataset.playerId;
+            currentPlayerId = playerId;
+            const player = playersData.find(p => p.player_id == playerId);
+            if (player) renderPlayerDetail(player);
+          }
         });
       });
     }
@@ -1422,7 +1427,9 @@
 
     function populateCompareDropdown(selectEl, type) {
       selectEl.innerHTML = '<option value="">— Choose —</option>';
-      const items = type === 'player' ? playersData : teamsData;
+      const items = type === 'player'
+        ? [...playersData].sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name))
+        : teamsData;
       items.forEach(item => {
         const opt = document.createElement('option');
         if (type === 'player') {
